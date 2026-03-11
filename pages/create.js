@@ -48,11 +48,11 @@ export default function Create() {
 
       const createData = await createRes.json();
 
-      if (!createRes.ok || !createData?.data?.task_id) {
-        throw new Error(createData?.error || createData?.message || "Failed to start generation");
+      if (!createRes.ok || !createData?.request_id) {
+        throw new Error(createData?.error || createData?.detail || "Failed to start generation");
       }
 
-      const taskId = createData.data.task_id;
+      const requestId = createData.request_id;
       setProgress(25);
       setStatusMsg("Rendering your GIF...");
 
@@ -61,13 +61,13 @@ export default function Create() {
         attemptRef.current += 1;
 
         try {
-          const pollRes = await fetch(`/api/generate?taskId=${taskId}`);
+          const pollRes = await fetch(`/api/generate?requestId=${requestId}`);
           const pollData = await pollRes.json();
-          const status = pollData?.data?.task_status;
+          const status = pollData?.status;
 
-          if (status === "succeed") {
+          if (status === "COMPLETED") {
             clearInterval(intervalRef.current);
-            const videos = pollData?.data?.task_result?.videos;
+            const videos = pollData?.video ? [pollData.video] : null;
             if (videos?.length > 0) {
               setVideoUrl(videos[0].url);
               setPhase("done");
@@ -75,9 +75,9 @@ export default function Create() {
             } else {
               throw new Error("Generation succeeded but no video returned");
             }
-          } else if (status === "failed") {
+          } else if (status === "FAILED") {
             clearInterval(intervalRef.current);
-            throw new Error(pollData?.data?.task_status_msg || "Generation failed on Kling's end");
+            throw new Error(pollData?.error || "Generation failed" || "Generation failed on Kling's end");
           } else {
             // Still processing
             const p = Math.min(25 + attemptRef.current * 4, 92);
