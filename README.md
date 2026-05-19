@@ -1,4 +1,4 @@
-# gifmaker.lol — Next.js + Kling AI
+# gifmaker.lol — Next.js + Kling AI (via fal.ai)
 
 ## Setup
 
@@ -9,13 +9,12 @@ npm run dev
 
 ## Deploy to Vercel
 
-1. Push this repo to GitHub (replace the current files)
+1. Push this repo to GitHub
 2. Go to vercel.com → Import the repo
-3. Add these environment variables in Vercel dashboard (Settings → Environment Variables):
+3. Add this environment variable in Vercel dashboard (Settings → Environment Variables):
 
 ```
-KLING_ACCESS_KEY=your_access_key_here
-KLING_SECRET_KEY=your_secret_key_here
+FAL_KEY=your_fal_ai_api_key_here
 ```
 
 4. Deploy — Vercel auto-detects Next.js
@@ -24,7 +23,13 @@ KLING_SECRET_KEY=your_secret_key_here
 
 - `/` — landing page
 - `/create` — AI GIF generator UI
-- `/api/generate` — server-side route that calls Kling API (keys never exposed to browser)
+- `/api/generate` — server-side route that calls fal.ai queue API (keys never exposed to browser)
+
+## API Flow
+
+1. **POST /api/generate** — Submits a prompt to fal.ai's Kling video queue, returns `request_id`
+2. **GET /api/generate?requestId=xxx** — Polls the status (IN_QUEUE → IN_PROGRESS → COMPLETED)
+3. **GET /api/generate?requestId=xxx&action=result** — Fetches the final video URL when COMPLETED
 
 ## File structure
 
@@ -33,7 +38,7 @@ pages/
   index.js          ← landing page
   create.js         ← GIF maker UI  
   api/
-    generate.js     ← Kling API proxy (server-side)
+    generate.js     ← fal.ai queue API proxy (server-side)
 styles/
   globals.css
 package.json
@@ -42,6 +47,7 @@ package.json
 ## Notes
 
 - Never put your API keys in the frontend code
-- The `jsonwebtoken` package generates the JWT server-side
+- The fal.ai key is used server-side only via the API route
 - Videos are ~5 seconds, looped in the browser (looks like a GIF)
-- Each generation costs ~1 Kling credit
+- Each generation costs ~$0.05-0.10 on fal.ai
+- Get your fal.ai key at: https://fal.ai/dashboard/keys

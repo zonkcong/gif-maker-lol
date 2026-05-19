@@ -1,5 +1,6 @@
-const FAL_KEY = process.env.FAL_API_KEY;
-const FAL_BASE = "https://queue.fal.run";
+const FAL_KEY = process.env.FAL_KEY;
+const FAL_QUEUE_BASE = "https://queue.fal.run";
+const MODEL = "fal-ai/kling-video/v1.6/standard/text-to-video";
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -8,15 +9,16 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
 
   if (!FAL_KEY) {
-    return res.status(500).json({ error: "FAL_API_KEY not configured in Vercel environment variables." });
+    return res.status(500).json({ error: "FAL_KEY not configured in Vercel environment variables." });
   }
 
+  // POST — Submit a new video generation request to the queue
   if (req.method === "POST") {
     const { prompt } = req.body;
     if (!prompt) return res.status(400).json({ error: "prompt is required" });
 
     try {
-      const response = await fetch(`${FAL_BASE}/fal-ai/kling-video/v1.6/standard/text-to-video`, {
+      const response = await fetch(`${FAL_QUEUE_BASE}/${MODEL}`, {
         method: "POST",
         headers: {
           "Authorization": `Key ${FAL_KEY}`,
@@ -31,27 +33,40 @@ export default async function handler(req, res) {
 
       const data = await response.json();
       if (!response.ok) {
-        return res.status(response.status).json({ error: data?.detail || data?.error || "FAL API error" });
+        return res.status(response.status).json({ error: data?.detail || data?.error || "fal.ai API error" });
       }
-      return res.status(200).json(data);
+
+      // Return the request_id and URLs for polling
+      return res.status(200).json({
+        request_id: data.request_id,
+        status: data.status,
+        status_url: data.status_url,
+        response_url: data.response_url,
+      });
     } catch (err) {
       return res.status(500).json({ error: err.message });
     }
   }
 
+  // GET — Poll for status or fetch result
   if (req.method === "GET") {
-    const { requestId } = req.query;
+    const { requestId, action } = req.query;
     if (!requestId) return res.status(400).json({ error: "requestId is required" });
 
     try {
-      const response = await fetch(
-        `${FAL_BASE}/fal-ai/kling-video/v1.6/standard/text-to-video/requests/${requestId}`,
-        { headers: { "Authorization": `Key ${FAL_KEY}` } }
-      );
+      // Use the correct fal.ai queue URL format
+      const baseUrl = `${FAL_QUEUE_BASE}/fal-ai/kling-video/requests/${requestId}`;
+      const url = action === "result" ? baseUrl : `${baseUrl}/status`;
+
+      const response = await fetch(url, {
+        headers: { "Authorization": `Key ${FAL_KEY}` },
+      });
+
       const data = await response.json();
       if (!response.ok) {
-        return res.status(response.status).json({ error: data?.detail || "FAL API error" });
+        return res.status(response.status).json({ error: data?.detail || "fal.ai API error" });
       }
+
       return res.status(200).json(data);
     } catch (err) {
       return res.status(500).json({ error: err.message });

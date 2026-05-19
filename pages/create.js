@@ -33,13 +33,13 @@ export default function Create() {
     if (!prompt.trim()) return;
     setPhase("generating");
     setProgress(10);
-    setStatusMsg("Sending to Kling AI...");
+    setStatusMsg("Sending to AI...");
     setErrorMsg("");
     setVideoUrl(null);
     attemptRef.current = 0;
 
     try {
-      // Hit our own API route — keys stay server-side
+      // Submit the generation request
       const createRes = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -53,23 +53,27 @@ export default function Create() {
       }
 
       const requestId = createData.request_id;
-      setProgress(25);
-      setStatusMsg("Rendering your GIF...");
+      setProgress(20);
+      setStatusMsg("Queued — rendering your GIF...");
 
-      // Poll every 5 seconds
+      // Poll status every 5 seconds
       intervalRef.current = setInterval(async () => {
         attemptRef.current += 1;
 
         try {
+          // Check status
           const pollRes = await fetch(`/api/generate?requestId=${requestId}`);
           const pollData = await pollRes.json();
           const status = pollData?.status;
 
           if (status === "COMPLETED") {
             clearInterval(intervalRef.current);
-            const videos = pollData?.video ? [pollData.video] : null;
-            if (videos?.length > 0) {
-              setVideoUrl(videos[0].url);
+            // Fetch the actual result
+            const resultRes = await fetch(`/api/generate?requestId=${requestId}&action=result`);
+            const resultData = await resultRes.json();
+
+            if (resultData?.video?.url) {
+              setVideoUrl(resultData.video.url);
               setPhase("done");
               setProgress(100);
             } else {
@@ -77,14 +81,19 @@ export default function Create() {
             }
           } else if (status === "FAILED") {
             clearInterval(intervalRef.current);
-            throw new Error(pollData?.error || "Generation failed" || "Generation failed on Kling's end");
+            throw new Error(pollData?.error || "Generation failed on the AI model's end");
           } else {
-            // Still processing
-            const p = Math.min(25 + attemptRef.current * 4, 92);
+            // Still IN_QUEUE or IN_PROGRESS
+            const p = Math.min(20 + attemptRef.current * 3, 92);
             setProgress(p);
-            setStatusMsg(`Still rendering... (${attemptRef.current * 5}s)`);
+            if (status === "IN_QUEUE") {
+              setStatusMsg(`In queue... (${attemptRef.current * 5}s)`);
+            } else {
+              setStatusMsg(`Rendering... (${attemptRef.current * 5}s)`);
+            }
           }
 
+          // Timeout after 6 minutes
           if (attemptRef.current > 72) {
             clearInterval(intervalRef.current);
             throw new Error("Timed out after 6 minutes. Try a simpler prompt.");
@@ -187,7 +196,7 @@ export default function Create() {
               <span style={{ color: "#00ff96" }}>Get a GIF.</span>
             </h1>
             <p style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, letterSpacing: 1 }}>
-              Powered by Kling AI — real video generation, not templates
+              Powered by AI — real video generation, not templates
             </p>
           </div>
 
@@ -296,7 +305,7 @@ export default function Create() {
 
                 {/* Cost note */}
                 <div style={{ marginTop: 28, fontSize: 10, color: "rgba(255,255,255,0.15)", letterSpacing: 1, textAlign: "center" }}>
-                  Each generation uses ~1 Kling credit (≈$0.10) · Results in 30–90 seconds
+                  Each generation takes 30–90 seconds · Results are looping video GIFs
                 </div>
               </div>
             )}
@@ -327,7 +336,7 @@ export default function Create() {
                 <style>{`
                   @keyframes wave {
                     from { height: 6px; opacity: 0.4; }
-                    to { height: ${Math.floor(Math.random() * 20) + 24}px; opacity: 1; }
+                    to { height: 38px; opacity: 1; }
                   }
                 `}</style>
 
@@ -342,7 +351,7 @@ export default function Create() {
                   maxWidth: 400,
                   margin: "0 auto 32px",
                 }}>
-                  "{prompt}"
+                  &ldquo;{prompt}&rdquo;
                 </div>
 
                 {/* Progress */}
@@ -384,7 +393,7 @@ export default function Create() {
                   />
                 </div>
                 <div style={{ color: "rgba(255,255,255,0.25)", fontSize: 12, marginBottom: 24, fontStyle: "italic" }}>
-                  "{prompt}"
+                  &ldquo;{prompt}&rdquo;
                 </div>
                 <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
                   <a
