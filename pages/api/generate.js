@@ -1,6 +1,6 @@
 const FAL_KEY = process.env.FAL_KEY;
 const FAL_QUEUE_BASE = "https://queue.fal.run";
-const MODEL = "fal-ai/kling-video/v1.6/standard/text-to-video";
+const MODEL = "fal-ai/minimax/video-01-live/text-to-video";
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -26,8 +26,7 @@ export default async function handler(req, res) {
         },
         body: JSON.stringify({
           prompt,
-          duration: "5",
-          aspect_ratio: "1:1",
+          prompt_optimizer: true,
         }),
       });
 
@@ -54,8 +53,8 @@ export default async function handler(req, res) {
     if (!requestId) return res.status(400).json({ error: "requestId is required" });
 
     try {
-      // Use the correct fal.ai queue URL format
-      const baseUrl = `${FAL_QUEUE_BASE}/fal-ai/kling-video/requests/${requestId}`;
+      // Use the correct fal.ai queue URL format for minimax
+      const baseUrl = `${FAL_QUEUE_BASE}/fal-ai/minimax/requests/${requestId}`;
       const url = action === "result" ? baseUrl : `${baseUrl}/status`;
 
       const response = await fetch(url, {
