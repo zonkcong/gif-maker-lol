@@ -53,6 +53,8 @@ export default function Create() {
       }
 
       const requestId = createData.request_id;
+      const statusUrl = createData.status_url;
+      const responseUrl = createData.response_url;
       setProgress(20);
       setStatusMsg("Queued — rendering your GIF...");
 
@@ -61,15 +63,15 @@ export default function Create() {
         attemptRef.current += 1;
 
         try {
-          // Check status
-          const pollRes = await fetch(`/api/generate?requestId=${requestId}`);
+          // Check status using the exact URL from fal.ai
+          const pollRes = await fetch(`/api/generate?url=${encodeURIComponent(statusUrl)}`);
           const pollData = await pollRes.json();
           const status = pollData?.status;
 
           if (status === "COMPLETED") {
             clearInterval(intervalRef.current);
-            // Fetch the actual result
-            const resultRes = await fetch(`/api/generate?requestId=${requestId}&action=result`);
+            // Fetch the actual result using the response URL
+            const resultRes = await fetch(`/api/generate?url=${encodeURIComponent(responseUrl)}`);
             const resultData = await resultRes.json();
 
             if (resultData?.video?.url) {

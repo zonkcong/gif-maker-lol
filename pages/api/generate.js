@@ -1,6 +1,6 @@
 const FAL_KEY = process.env.FAL_KEY;
 const FAL_QUEUE_BASE = "https://queue.fal.run";
-const MODEL = "fal-ai/minimax/video-01-live/text-to-video";
+const MODEL = "fal-ai/kling-video/v1.6/standard/text-to-video";
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -26,7 +26,8 @@ export default async function handler(req, res) {
         },
         body: JSON.stringify({
           prompt,
-          prompt_optimizer: true,
+          duration: "5",
+          aspect_ratio: "1:1",
         }),
       });
 
@@ -35,7 +36,7 @@ export default async function handler(req, res) {
         return res.status(response.status).json({ error: data?.detail || data?.error || "fal.ai API error" });
       }
 
-      // Return the request_id and URLs for polling
+      // Return the request_id and the exact URLs from fal.ai for polling
       return res.status(200).json({
         request_id: data.request_id,
         status: data.status,
@@ -47,16 +48,18 @@ export default async function handler(req, res) {
     }
   }
 
-  // GET — Poll for status or fetch result
+  // GET — Proxy a status check or result fetch to fal.ai
+  // Accepts a `url` query param (the full fal.ai URL to proxy)
   if (req.method === "GET") {
-    const { requestId, action } = req.query;
-    if (!requestId) return res.status(400).json({ error: "requestId is required" });
+    const { url } = req.query;
+    if (!url) return res.status(400).json({ error: "url query parameter is required" });
+
+    // Only allow proxying to fal.run domains for security
+    if (!url.startsWith("https://queue.fal.run/")) {
+      return res.status(400).json({ error: "Invalid URL — only fal.ai queue URLs are allowed" });
+    }
 
     try {
-      // Use the correct fal.ai queue URL format for minimax
-      const baseUrl = `${FAL_QUEUE_BASE}/fal-ai/minimax/requests/${requestId}`;
-      const url = action === "result" ? baseUrl : `${baseUrl}/status`;
-
       const response = await fetch(url, {
         headers: { "Authorization": `Key ${FAL_KEY}` },
       });
