@@ -95,10 +95,10 @@ export default function Create() {
             }
           }
 
-          // Timeout after 6 minutes
-          if (attemptRef.current > 72) {
+          // Timeout after 10 minutes
+          if (attemptRef.current > 120) {
             clearInterval(intervalRef.current);
-            throw new Error("Timed out after 6 minutes. Try a simpler prompt.");
+            throw new Error("Timed out after 10 minutes. Try a simpler prompt.");
           }
         } catch (pollErr) {
           clearInterval(intervalRef.current);
@@ -307,7 +307,7 @@ export default function Create() {
 
                 {/* Cost note */}
                 <div style={{ marginTop: 28, fontSize: 10, color: "rgba(255,255,255,0.15)", letterSpacing: 1, textAlign: "center" }}>
-                  Each generation takes 30–90 seconds · Results are looping video GIFs
+                  Each generation takes 2–8 minutes · Results are looping video GIFs
                 </div>
               </div>
             )}
@@ -367,7 +367,7 @@ export default function Create() {
                   }} />
                 </div>
                 <div style={{ fontSize: 10, color: "rgba(255,255,255,0.2)", letterSpacing: 2 }}>
-                  USUALLY 30–90 SECONDS
+                  USUALLY 2–8 MINUTES
                 </div>
               </div>
             )}

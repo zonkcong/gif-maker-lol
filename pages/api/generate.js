@@ -1,6 +1,6 @@
 const FAL_KEY = process.env.FAL_KEY;
 const FAL_QUEUE_BASE = "https://queue.fal.run";
-const MODEL = "fal-ai/kling-video/v1.6/standard/text-to-video";
+const MODEL = "fal-ai/kling-video/v1/standard/text-to-video";
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
